@@ -1,0 +1,224 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Face Swap Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-bottom-color: #8b5cf6;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-6xl">
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500 mb-4">
+                <i class="fa-solid fa-users-viewfinder mr-2"></i>Face Swap Studio
+            </h1>
+            <p class="text-slate-400">Frontend interface for automated video face replacement.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="lg:col-span-1 glass-panel rounded-2xl p-6 shadow-xl flex flex-col gap-6">
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">1. Upload Target Face (Image)</label>
+                    <label for="face-upload" class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-700/50 transition">
+                        <div class="flex flex-col items-center justify-center pt-3 pb-3">
+                            <i class="fa-solid fa-user-astronaut text-2xl text-purple-400 mb-2"></i>
+                            <p class="text-xs text-slate-400">Select face image</p>
+                        </div>
+                        <input id="face-upload" type="file" class="hidden" accept="image/*" />
+                    </label>
+                    <img id="face-preview" class="mt-3 max-h-24 rounded-lg hidden object-cover mx-auto" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-2">2. Upload Source Video</label>
+                    <label for="video-upload" class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer bg-slate-800/50 hover:bg-slate-700/50 transition">
+                        <div class="flex flex-col items-center justify-center pt-3 pb-3">
+                            <i class="fa-solid fa-file-video text-2xl text-pink-400 mb-2"></i>
+                            <p class="text-xs text-slate-400">Select video file</p>
+                        </div>
+                        <input id="video-upload" type="file" class="hidden" accept="video/mp4,video/x-m4v,video/*" />
+                    </label>
+                    <p id="video-filename" class="text-xs text-slate-400 mt-2 text-center hidden"></p>
+                </div>
+
+                <div id="error-message" class="hidden bg-red-500/20 border border-red-500 text-red-300 p-3 rounded-lg text-sm"></div>
+
+                <button id="process-btn" disabled class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2 mt-auto">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Process Video
+                </button>
+            </div>
+
+            <div class="lg:col-span-2 grid grid-rows-2 gap-6">
+                
+                <div class="glass-panel rounded-2xl p-4 shadow-xl flex flex-col">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Source Video Preview</label>
+                    <div class="flex-grow bg-slate-900 rounded-lg border border-slate-700 overflow-hidden flex items-center justify-center relative min-h-[200px]">
+                        <p id="source-placeholder" class="text-slate-500 text-sm absolute">Original video will appear here</p>
+                        <video id="source-video" controls class="max-w-full max-h-[300px] hidden relative z-10"></video>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-4 shadow-xl flex flex-col">
+                    <label class="block text-sm font-medium text-slate-300 mb-2">Output Video</label>
+                    <div class="flex-grow bg-slate-900 rounded-lg border border-slate-700 overflow-hidden flex items-center justify-center relative min-h-[200px]">
+                        <p id="result-placeholder" class="text-slate-500 text-sm absolute">Processed video will appear here</p>
+                        
+                        <div id="loading-indicator" class="hidden absolute flex flex-col items-center justify-center gap-3 z-20 w-full px-8">
+                            <span class="loader w-10 h-10"></span>
+                            <p class="text-purple-400 text-sm animate-pulse text-center">Processing frames... this requires a backend server.</p>
+                            <div class="w-full bg-slate-700 rounded-full h-2 mt-2">
+                                <div class="bg-purple-500 h-2 rounded-full w-1/3 animate-pulse"></div>
+                            </div>
+                        </div>
+                        
+                        <video id="result-video" controls class="max-w-full max-h-[300px] hidden relative z-10"></video>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // DOM Elements
+        const faceUpload = document.getElementById('face-upload');
+        const facePreview = document.getElementById('face-preview');
+        const videoUpload = document.getElementById('video-upload');
+        const videoFilename = document.getElementById('video-filename');
+        const sourceVideo = document.getElementById('source-video');
+        const sourcePlaceholder = document.getElementById('source-placeholder');
+        const processBtn = document.getElementById('process-btn');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const resultVideo = document.getElementById('result-video');
+        const resultPlaceholder = document.getElementById('result-placeholder');
+        const errorMessage = document.getElementById('error-message');
+
+        let faceFile = null;
+        let videoFile = null;
+
+        // Handle Face Image Upload
+        faceUpload.addEventListener('change', function(e) {
+            faceFile = e.target.files[0];
+            if (!faceFile) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                facePreview.src = event.target.result;
+                facePreview.classList.remove('hidden');
+                checkReadyState();
+            };
+            reader.readAsDataURL(faceFile);
+        });
+
+        // Handle Video Upload
+        videoUpload.addEventListener('change', function(e) {
+            videoFile = e.target.files[0];
+            if (!videoFile) return;
+
+            videoFilename.textContent = videoFile.name;
+            videoFilename.classList.remove('hidden');
+
+            const videoURL = URL.createObjectURL(videoFile);
+            sourceVideo.src = videoURL;
+            sourceVideo.classList.remove('hidden');
+            sourcePlaceholder.classList.add('hidden');
+            
+            checkReadyState();
+        });
+
+        function checkReadyState() {
+            if (faceFile && videoFile) {
+                processBtn.disabled = false;
+            }
+        }
+
+        // Processing Logic
+        processBtn.addEventListener('click', async () => {
+            if (!faceFile || !videoFile) return;
+
+            // UI Setup for loading
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<span class="loader w-4 h-4 border-2 mr-2"></span> Processing...';
+            errorMessage.classList.add('hidden');
+            
+            resultVideo.classList.add('hidden');
+            resultPlaceholder.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden');
+            loadingIndicator.classList.add('flex');
+
+            try {
+                // ==========================================
+                // ⚠️ BACKEND INTEGRATION PLACEHOLDER ⚠️
+                // ==========================================
+                // You cannot do heavy video processing in JS alone.
+                // This is where you would send the files to your Python backend.
+                
+                const formData = new FormData();
+                formData.append('target_face', faceFile);
+                formData.append('source_video', videoFile);
+
+                /* Example API Call to a local server:
+                
+                const response = await fetch('http://localhost:5000/api/faceswap', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Processing failed on server');
+                
+                const blob = await response.blob();
+                const processedVideoURL = URL.createObjectURL(blob);
+                
+                */
+
+                // Simulating a backend delay for demonstration
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                throw new Error("No backend detected. Video processing requires a server-side script (e.g., Python/OpenCV) to handle the model inference.");
+
+            } catch (error) {
+                console.error("Processing failed:", error);
+                errorMessage.textContent = error.message;
+                errorMessage.classList.remove('hidden');
+                resultPlaceholder.classList.remove('hidden');
+            } finally {
+                // Restore UI
+                loadingIndicator.classList.add('hidden');
+                loadingIndicator.classList.remove('flex');
+                processBtn.disabled = false;
+                processBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Process Video';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+```
