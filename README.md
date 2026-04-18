@@ -1,5 +1,7 @@
 # AP_editor
 
+A power git tool contains many html files to edit picture and videos.
+
 <p align="left">
   <a href="https://www.instagram.com/itz_vorzhevik_volnyshev?igsh=OTNqMndzdDFzZ293">
     <img src="https://img.shields.io/badge/Instagram-Main-E4405F?style=for-the-badge&logo=instagram&logoColor=white" />
@@ -27,9 +29,6 @@
   </a>
 </p>
 
-
-
-A power git tool contains many html files to edit picture and videos.
 
 # About
 There are many html file. It is a hand made ai script made by html. Can make anything that you want.
